@@ -9,5 +9,3 @@ def gemini(prompt):
     response = client.models.generate_content(model="gemini-2.5-flash",contents=prompt)
     return response.text
 
-test_question = "What is 2 + 2?"
-print(analyze_question(test_question, gemini))
