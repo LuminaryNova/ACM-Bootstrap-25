@@ -1,10 +1,10 @@
 from analyze import analyze_question
-from google import genai
+import google.generativeai as genai
 import dspy
 import streamlit as st  
 
 genai.configure(api_key="AIzaSyB3tmEYVAvY8jjD4pRqPy0euD1-VIpCQGo")
-model = genai.GenerativeModel('gemini-1.5-flash')
+model = genai.GenerativeModel('gemini-2.5-pro')
 
 def gemini(prompt):
     response = model.generate_content(prompt, stream=True)
