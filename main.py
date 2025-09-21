@@ -3,11 +3,13 @@ from google import genai
 import dspy
 import streamlit as st  
 
-client = genai.Client(api_key="AIzaSyB3tmEYVAvY8jjD4pRqPy0euD1-VIpCQGo")
+genai.configure(api_key="AIzaSyB3tmEYVAvY8jjD4pRqPy0euD1-VIpCQGo")
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 def gemini(prompt):
-    response = client.models.generate_content(model="gemini-2.5-flash-lite",contents=prompt)
-    return response.text
+    response = model.generate_content(prompt, stream=True)
+    for chunk in response:
+        yield chunk.text
 
 st.set_page_config(page_title="AI Tutor", page_icon="🤖", layout="wide")
 
@@ -29,10 +31,11 @@ if page == "Q&A Chat":
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        ai_response = gemini(prompt)
-        st.session_state.chat_history.append(("assistant", ai_response))
         with st.chat_message("assistant"):
-            st.markdown(ai_response)
+            response_generator = gemini(prompt)
+            full_response = st.write_stream(response_generator)
+        
+        st.session_state.chat_history.append(("assistant", full_response))
 
 elif page == "Topic Questions":
     st.title("Topic Questions")
