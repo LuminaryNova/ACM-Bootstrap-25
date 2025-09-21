@@ -37,8 +37,15 @@ if page == "Q&A Chat":
 
 elif page == "Topic Questions":
     st.title("Topic Questions")
-    st.write("Here you'll get questions from the internet based on your topics (to be implemented).")
+    st.write("Here you'll get questions from the internet based on your topics.")
+    topic = st.text_input("Enter a topic")
+    questions = gemini(f"Generate 5 questions about {topic}")
+    st.write(questions)
+
 
 elif page == "Revision Notes":
     st.title("Revision Notes")
-    st.write("Here you'll get revision notes (to be implemented).")
+    st.write("Here you'll get revision notes.")
+    topic = st.text_input("Enter a topic for revision notes")
+    notes = gemini(f"Provide concise revision notes about {topic}")
+    st.write(notes)
