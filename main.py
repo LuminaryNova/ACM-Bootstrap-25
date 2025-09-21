@@ -21,9 +21,8 @@ if page == "Q&A Chat":
         st.session_state.chat_history = []
 
     for sender, msg in st.session_state.chat_history:
-        role = "user" if sender == "user" else "assistant"
-        with st.chat_message("user"):
-            st.markdown(prompt)
+        with st.chat_message(sender):
+            st.markdown(msg)
 
     if prompt := st.chat_input("Type your question here..."):
         st.session_state.chat_history.append(("user", prompt))
@@ -31,7 +30,7 @@ if page == "Q&A Chat":
             st.markdown(prompt)
 
         ai_response = gemini(prompt)
-        st.session_state.chat_history.append(("ai", ai_response))
+        st.session_state.chat_history.append(("assistant", ai_response))
         with st.chat_message("assistant"):
             st.markdown(ai_response)
 
