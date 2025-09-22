@@ -16,5 +16,5 @@ jobs:
       - name: Deploy to Defang
         uses: DefangLabs/defang-github-action@v1.1.3
         with:
-          compose-file: compose.yaml
+          compose-files: compose.yaml   # <-- change here
           mode: affordable
