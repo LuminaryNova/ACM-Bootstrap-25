@@ -37,5 +37,6 @@ AI Tutor is an interactive tutoring web app built with Streamlit, using **Google
 1. Clone the repository:
 
 ```bash
-git clone <your-repo-url>
-cd <your-project-folder>
+git clone https://github.com/LuminaryNova/ACM-Bootstrap-25.git
+cd ACM-Bootstrap-25
+
