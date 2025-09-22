@@ -75,8 +75,8 @@ elif page == "Topic Questions":
     st.title("Topic Questions")
     with st.form("topic_form"):
         st.write("Select your options to generate practice questions.")
-        topic = st.text_input("Topic" , placeholder = "e.g., Algebra, Newton's Laws")
-        question_type = st.radio("Type of Questions",["Multiple Choice","Numerical","Subjective"])
+        topic = st.text_input("Topic", placeholder="e.g., Algebra, Newton's Laws")
+        question_type = st.radio("Type of Questions", ["Multiple Choice", "Numerical", "Subjective"])
         num_questions = st.slider("Number of Questions", 1, 10, 3)
         difficulty = st.selectbox("Difficulty Level", ["Easy", "Medium", "Hard"])
         submitted = st.form_submit_button("Generate Questions")
@@ -88,64 +88,54 @@ elif page == "Topic Questions":
 
     if submitted:
         st.session_state.answer_visibility = {}
-        with st.spinner(f"Searching the web and generating {num_questions} {question_type} questions on {topic}..."):
-            try:
+        try:
+            with st.spinner(f"Searching the web and generating {num_questions} {question_type} questions on {topic}..."):
                 tavily = TavilyClient(api_key=st.secrets["api_keys"]["tavily_api_key"])
                 search_query = f"in depth {question_type} questions and answers for a quiz on {topic} at a {difficulty} level"
                 search_results = tavily.search(query=search_query, search_depth='advanced', max_results=5)
-                context = "\n".join([result["content"] for result in search_results["results"]])
-            except (KeyError, AttributeError):
-                st.error("Error fetching data from Tavily. Please check your API key.")
-                st.stop()
-            except Exception as e:
-                st.error(f"An unexpected error occurred with Tavily: {e}")
-                st.stop()
+                context = "\n".join([result.get("content", "") for result in search_results.get("results", [])])
 
-            if question_type == "Multiple Choice":
-                json_format_instruction = """
-                Each object must have three keys: "question", "options" (a list of 4 strings), and "answer" (the correct option string)."""
-            else:
-                json_format_instruction = """
-                Each object must have two keys: "question" and "answer"."""
+                if question_type == "Multiple Choice":
+                    json_format_instruction = 'Each object must have three keys: "question", "options" (list of 4 strings), and "answer" (the correct option).'
+                else:
+                    json_format_instruction = 'Each object must have two keys: "question" and "answer".'
 
-            prompt_for_questions = f"""Based ONLY on the following context, generate exactly {num_questions} questions of the type '{question_type}' on the topic "{topic}".
-                                        Context from the web search:
-                                        
-                                        - For all mathematical expressions, equations, integrals, and fractions, format them using LaTeX syntax (e.g., `\\int_0^1 x^2 dx`, `\\frac{{a}}{{b}}`).
-                                        - Do not use plain text like '1/2' — always return LaTeX.
-                                        - Wrap inline math with `$ ... $` and block math with `$$ ... $$`.
-                                        
-                                        ---
-                                        {context}
-                                        ---
-                                    
-                                        Format the entire output as a single, valid JSON list of objects. Do not include any text, titles, or explanations before or after the JSON list.
-                                        {json_format_instruction}
-                                        """
-            response_text = generate_single_response(prompt_for_questions)
-            if response_text == None: st.session_state.generated_questions = None; st.stop()
-            try:
-                clean_response = response_text.strip().replace("```json", "").replace("```", "")
-                st.session_state.generated_questions = json.loads(clean_response)
-            except (json.JSONDecodeError, TypeError):
-                st.error("Failed to parse the AI's response. The format might be incorrect. Please try again.")
-                st.session_state.generated_questions = None
+                prompt_for_questions = f"""
+Based ONLY on the following context, generate exactly {num_questions} questions of the type '{question_type}' on the topic "{topic}".
+Context from the web search:
+
+- For all mathematical expressions, equations, integrals, and fractions, format them using LaTeX syntax (e.g., `\\int_0^1 x^2 dx`, `\\frac{{a}}{{b}}`).
+- Do not use plain text like '1/2' — always return LaTeX.
+- Wrap inline math with `$ ... $` and block math with `$$ ... $$`.
+
+---
+{context}
+---
+
+Format the entire output as a single, valid JSON list of objects. Do not include any text, titles, or explanations before or after the JSON list.
+{json_format_instruction}
+"""
+                response_text = generate_single_response(prompt_for_questions)
+                if response_text is None:
+                    st.session_state.generated_questions = None
+                else:
+                    clean_response = response_text.strip().replace("```json", "").replace("```", "")
+                    st.session_state.generated_questions = json.loads(clean_response)
+        except Exception as e:
+            st.error(f"An error occurred: {e}")
+            st.session_state.generated_questions = None
 
     if st.session_state.generated_questions:
         st.subheader(f"Here are your {question_type} questions on {topic}:")
         for i, qa in enumerate(st.session_state.generated_questions):
             st.markdown(f"**Question {i + 1}:** {qa.get('question', 'N/A')}")
-
             if question_type == "Multiple Choice" and "options" in qa:
                 for opt in qa["options"]:
                     st.markdown(f"- {opt}")
-
             if st.button(f"Show Answer", key=f"q_{i}"):
                 st.session_state.answer_visibility[i] = not st.session_state.answer_visibility.get(i, False)
-
             if st.session_state.answer_visibility.get(i, False):
                 st.success(f"**Answer:** {qa.get('answer', 'N/A')}")
-
             st.divider()
 
 
