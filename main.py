@@ -3,8 +3,9 @@ import streamlit as st
 from tavily import TavilyClient
 import json
 import PyPDF2
+import os
 
-genai.configure(api_key=st.secrets["api_keys"]["gemini_api_key"])
+genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 model = genai.GenerativeModel('gemini-2.5-flash')
 
 def is_study_related(prompt:str) -> bool:
@@ -90,7 +91,7 @@ elif page == "Topic Questions":
         st.session_state.answer_visibility = {}
         try:
             with st.spinner(f"Searching the web and generating {num_questions} {question_type} questions on {topic}..."):
-                tavily = TavilyClient(api_key=st.secrets["api_keys"]["tavily_api_key"])
+                tavily = TavilyClient(api_key=os.environ["TAVILY_API_KEY"])
                 search_query = f"in depth {question_type} questions and answers for a quiz on {topic} at a {difficulty} level"
                 search_results = tavily.search(query=search_query, search_depth='advanced', max_results=5)
                 context = "\n".join([result.get("content", "") for result in search_results.get("results", [])])
@@ -155,7 +156,7 @@ elif page == "Revision Notes":
         if submitted_topic and topic:
             with st.spinner(f"Generating revision notes on {topic}..."):
                 try:
-                    tavily = TavilyClient(api_key=st.secrets["api_keys"]["tavily_api_key"])
+                    tavily = TavilyClient(api_key=os.environ["TAVILY_API_KEY"])
                     search_query = f"in-depth explanation and key points about the topic: {topic}"
                     search_results = tavily.search(query = search_query, search_depth='advanced', max_results=5)
                     context = "\n".join([result["content"] for result in search_results["results"]])
