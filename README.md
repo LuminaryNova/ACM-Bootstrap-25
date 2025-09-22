@@ -38,5 +38,25 @@ AI Tutor is an interactive tutoring web app built with Streamlit, using **Google
 
 ```bash
 git clone https://github.com/LuminaryNova/ACM-Bootstrap-25.git
-cd ACM-Bootstrap-25
+cd ACM-Bootstrap-25 
+```
+2. Create and activate virtual environment:
+```bash
+python3.13 -m venv venv
+source venv/bin/activate
+```
+3. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
 
+4. Set Environment Variables:
+```bash
+export GEMINI_API_KEY = "YOUR_API_KEY"
+export TAVILY_API_KEY = "YOUR_API_KEY"
+```
+
+5. Run the streamlit app:
+```bash
+streamlit run main.py
+```
