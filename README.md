@@ -1,6 +1,6 @@
 # AI Tutor - ACM Bootstrapper 2025
 
-AI Tutor is an interactive tutoring web app built with Streamlit, using **Google Gemini AI** and a **custom Tavily integration (RAG implementation)** developed by the author to generate:
+AI Tutor is an interactive tutoring web app built with Streamlit, using **Google Gemini AI** and a **custom Tavily integration (RAG implementation)** developed by CodeShot to generate:
 
 - Q&A Chat with study-related prompts
 - Topic-specific practice questions
