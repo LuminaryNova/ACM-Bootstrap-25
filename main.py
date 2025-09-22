@@ -26,7 +26,7 @@ def is_study_related(prompt:str) -> bool:
 def gemini(prompt):
     if not is_study_related(prompt):
         st.warning("⚠️ This app only supports study-related questions. Please ask something academic.")
-        return
+        return None
     response = model.generate_content(prompt, stream=True)
     for chunk in response:
         yield chunk.text
@@ -34,7 +34,7 @@ def gemini(prompt):
 def generate_single_response(prompt):
     if not is_study_related(prompt):
         st.warning("⚠️ This app only supports study-related questions. Please ask something academic.")
-        return "⚠️ Not study related."
+        return None
     response = model.generate_content(prompt)
     return response.text
 
@@ -110,13 +110,20 @@ elif page == "Topic Questions":
 
             prompt_for_questions = f"""Based ONLY on the following context, generate exactly {num_questions} questions of the type '{question_type}' on the topic "{topic}".
                                         Context from the web search:
+                                        
+                                        - For all mathematical expressions, equations, integrals, and fractions, format them using LaTeX syntax (e.g., `\\int_0^1 x^2 dx`, `\\frac{{a}}{{b}}`).
+                                        - Do not use plain text like '1/2' — always return LaTeX.
+                                        - Wrap inline math with `$ ... $` and block math with `$$ ... $$`.
+                                        
                                         ---
                                         {context}
                                         ---
+                                    
                                         Format the entire output as a single, valid JSON list of objects. Do not include any text, titles, or explanations before or after the JSON list.
                                         {json_format_instruction}
                                         """
             response_text = generate_single_response(prompt_for_questions)
+            if response_text == None: st.session_state.generated_questions = None; st.stop()
             try:
                 clean_response = response_text.strip().replace("```json", "").replace("```", "")
                 st.session_state.generated_questions = json.loads(clean_response)
