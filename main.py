@@ -47,6 +47,8 @@ def gemini(prompt):
         yield chunk.text
 
 def generate_single_response(prompt):
+    if not is_study_related(prompt):
+        return "⚠️ This app only supports study-related content. Please modify your request."
     response = generation_model.generate_content(prompt)
     return response.text
 
