@@ -24,3 +24,7 @@ defang
 defang.exe
 .defang
 venv/
+*.pyc
+*.pyo
+*.pyd
+__pycache__/

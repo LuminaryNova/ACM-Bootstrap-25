@@ -5,6 +5,13 @@ import json
 import PyPDF2
 import os
 
+LATEX_INSTRUCTION = """
+- For all mathematical expressions, equations, integrals, and fractions, format them using LaTeX syntax.
+- For example, instead of 'x^2 / 2', write `$\\frac{x^2}{2}$`. Instead of 'integral of x from 0 to 1', write `$\\int_0^1 x dx$`.
+- Always wrap inline math with single dollar signs (`$ ... $`).
+- Always wrap block math (equations on their own line) with double dollar signs (`$$ ... $$`).
+"""
+
 try:
     genai.configure(api_key=os.environ["GEMINI_API_KEY"])
     TAVILY_API_KEY = os.environ["TAVILY_API_KEY"]
@@ -12,7 +19,9 @@ except KeyError:
     st.error("🚨 Please set GEMINI_API_KEY and TAVILY_API_KEY as environment variables.")
     st.stop()
 
-model = genai.GenerativeModel('gemini-1.5-flash')
+SYSTEM_INSTRUCTION_CHAT = f"You are a helpful AI tutor. {LATEX_INSTRUCTION}"
+model = genai.GenerativeModel('gemini-1.5-flash', system_instruction=SYSTEM_INSTRUCTION_CHAT)
+generation_model = genai.GenerativeModel('gemini-1.5-flash')
 
 def is_study_related(prompt:str) -> bool:
     check_prompt = f"""
@@ -22,8 +31,7 @@ def is_study_related(prompt:str) -> bool:
     Answer with only "YES" if it is study-related, or 'NO' if it is not.
     """
     try:
-        check_model = genai.GenerativeModel('gemini-1.5-flash')
-        response = check_model.generate_content(check_prompt)
+        response = generation_model.generate_content(check_prompt)
         answer = response.text.strip().upper()
         return answer.startswith("Y")
     except Exception as e:
@@ -39,7 +47,7 @@ def gemini(prompt):
         yield chunk.text
 
 def generate_single_response(prompt):
-    response = model.generate_content(prompt)
+    response = generation_model.generate_content(prompt)
     return response.text
 
 def extract_text_from_pdf(file):
@@ -80,7 +88,7 @@ elif page == "Topic Questions":
     st.title("Topic Questions")
     with st.form("topic_form"):
         st.write("Select your options to generate practice questions.")
-        topic = st.text_input("Topic", placeholder="e.g., Algebra, Newton's Laws")
+        topic = st.text_input("Topic", placeholder="e.g., Integrals, Newton's Laws")
         question_type = st.radio("Type of Questions", ["Multiple Choice", "Numerical", "Subjective"])
         num_questions = st.slider("Number of Questions", 1, 10, 3)
         difficulty = st.selectbox("Difficulty Level", ["Easy", "Medium", "Hard"])
@@ -104,14 +112,12 @@ elif page == "Topic Questions":
                     json_format_instruction = 'Each object must have three keys: "question", "options" (list of 4 strings), and "answer" (the correct option).'
                 else:
                     json_format_instruction = 'Each object must have two keys: "question" and "answer".'
-
                 prompt_for_questions = f"""
 Based ONLY on the following context, generate exactly {num_questions} questions of the type '{question_type}' on the topic "{topic}".
 Context from the web search:
 
-- For all mathematical expressions, equations, integrals, and fractions, format them using LaTeX syntax (e.g., `\\int_0^1 x^2 dx`, `\\frac{{a}}{{b}}`).
-- Do not use plain text like '1/2' — always return LaTeX.
-- Wrap inline math with `$ ... $` and block math with `$$ ... $$`.
+Here are your formatting rules:
+{LATEX_INSTRUCTION}
 
 ---
 {context}
@@ -167,6 +173,9 @@ elif page == "Revision Notes":
                     Based on the following context from a web search, generate a comprehensive set of revision notes on the topic "{topic}".
                     The notes should be well-structured, easy to understand, and cover the key points.
                     Use markdown formatting, including headings, subheadings, bullet points, and bold text for important terms.
+                    
+                    Here are your formatting rules for math:
+                    {LATEX_INSTRUCTION}
 
                     Context:
                     ---
@@ -200,6 +209,9 @@ elif page == "Revision Notes":
                     The notes should be well-structured, easy to understand, and capture the key points and concepts.
                     Use markdown formatting, including headings, subheadings, bullet points, and bold text for important terms.
 
+                    Here are your formatting rules for math:
+                    {LATEX_INSTRUCTION}
+
                     Text to Summarize:
                     ---
                     {input_text}
@@ -210,7 +222,7 @@ elif page == "Revision Notes":
                         st.session_state.revision_notes = notes
             else:
                 st.warning("Please paste text or upload a document to summarize.")
-    
+
     if st.session_state.revision_notes:
         st.divider()
         st.subheader("Your Generated Revision Notes")
