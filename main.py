@@ -5,8 +5,11 @@ import json
 import PyPDF2
 import os
 
+port = int(os.environ.get("PORT", 8501))
+
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 model = genai.GenerativeModel('gemini-2.5-flash')
+
 
 def is_study_related(prompt:str) -> bool:
     check_prompt = f""" 
