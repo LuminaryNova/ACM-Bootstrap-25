@@ -20,8 +20,7 @@
 **/Thumbs.db
 Dockerfile
 *.Dockerfile
-# Ignore our own binary, but only in the root to avoid ignoring subfolders
 defang
 defang.exe
-# Ignore our project-level state
 .defang
+venv/
