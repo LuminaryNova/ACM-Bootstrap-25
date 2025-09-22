@@ -5,21 +5,24 @@ import json
 import PyPDF2
 import os
 
-port = int(os.environ.get("PORT", 8501))
+try:
+    genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+    TAVILY_API_KEY = os.environ["TAVILY_API_KEY"]
+except KeyError:
+    st.error("🚨 Please set GEMINI_API_KEY and TAVILY_API_KEY as environment variables.")
+    st.stop()
 
-genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-model = genai.GenerativeModel('gemini-2.5-flash')
-
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 def is_study_related(prompt:str) -> bool:
-    check_prompt = f""" 
+    check_prompt = f"""
     You are a strict filter for an AI tutoring app.
     Decide if the following prompt is related to academic study (math, science, engineering, history, literature, exam prep, etc..).
     Prompt: "{prompt}"
     Answer with only "YES" if it is study-related, or 'NO' if it is not.
     """
     try:
-        check_model = genai.GenerativeModel('gemini-2.5-flash-lite')
+        check_model = genai.GenerativeModel('gemini-1.5-flash')
         response = check_model.generate_content(check_prompt)
         answer = response.text.strip().upper()
         return answer.startswith("Y")
@@ -36,9 +39,6 @@ def gemini(prompt):
         yield chunk.text
 
 def generate_single_response(prompt):
-    if not is_study_related(prompt):
-        st.warning("⚠️ This app only supports study-related questions. Please ask something academic.")
-        return None
     response = model.generate_content(prompt)
     return response.text
 
@@ -72,8 +72,9 @@ if page == "Q&A Chat":
         with st.chat_message("assistant"):
             with st.spinner("AI is thinking..."):
                 response_generator = gemini(prompt)
-                full_response = st.write_stream(response_generator)
-        st.session_state.chat_history.append(("assistant", full_response))
+                if response_generator:
+                    full_response = st.write_stream(response_generator)
+                    st.session_state.chat_history.append(("assistant", full_response))
 
 elif page == "Topic Questions":
     st.title("Topic Questions")
@@ -92,9 +93,9 @@ elif page == "Topic Questions":
 
     if submitted:
         st.session_state.answer_visibility = {}
-        try:
-            with st.spinner(f"Searching the web and generating {num_questions} {question_type} questions on {topic}..."):
-                tavily = TavilyClient(api_key=os.environ["TAVILY_API_KEY"])
+        with st.spinner(f"Searching the web and generating {num_questions} {question_type} questions on {topic}..."):
+            try:
+                tavily = TavilyClient(api_key=TAVILY_API_KEY)
                 search_query = f"in depth {question_type} questions and answers for a quiz on {topic} at a {difficulty} level"
                 search_results = tavily.search(query=search_query, search_depth='advanced', max_results=5)
                 context = "\n".join([result.get("content", "") for result in search_results.get("results", [])])
@@ -120,19 +121,19 @@ Format the entire output as a single, valid JSON list of objects. Do not include
 {json_format_instruction}
 """
                 response_text = generate_single_response(prompt_for_questions)
-                if response_text is None:
-                    st.session_state.generated_questions = None
-                else:
+                if response_text:
                     clean_response = response_text.strip().replace("```json", "").replace("```", "")
                     st.session_state.generated_questions = json.loads(clean_response)
-        except Exception as e:
-            st.error(f"An error occurred: {e}")
-            st.session_state.generated_questions = None
+                else:
+                    st.session_state.generated_questions = None
+            except Exception as e:
+                st.error(f"An error occurred: {e}")
+                st.session_state.generated_questions = None
 
     if st.session_state.generated_questions:
         st.subheader(f"Here are your {question_type} questions on {topic}:")
         for i, qa in enumerate(st.session_state.generated_questions):
-            st.markdown(f"**Question {i + 1}:** {qa.get('question', 'N/A')}")
+            st.markdown(f"**Question {i + 1}:** \n{qa.get('question', 'N/A')}")
             if question_type == "Multiple Choice" and "options" in qa:
                 for opt in qa["options"]:
                     st.markdown(f"- {opt}")
@@ -142,10 +143,8 @@ Format the entire output as a single, valid JSON list of objects. Do not include
                 st.success(f"**Answer:** {qa.get('answer', 'N/A')}")
             st.divider()
 
-
 elif page == "Revision Notes":
     st.title("Revision Notes")
-    
     if "revision_notes" not in st.session_state:
         st.session_state.revision_notes = ""
     tab1, tab2 = st.tabs(["Generate from topic", "Summarize my Text/Document"])
@@ -153,15 +152,15 @@ elif page == "Revision Notes":
     with tab1:
         st.subheader("Generate Notes from Topic")
         with st.form("notes_from_topic_form"):
-            topic = st.text_input("Topic", placeholder = "e.g. Pythagoras Theorem, Shifting of Curves")
+            topic = st.text_input("Topic", placeholder="e.g. Pythagoras Theorem, Shifting of Curves")
             submitted_topic = st.form_submit_button("Generate Notes")
-        
+
         if submitted_topic and topic:
             with st.spinner(f"Generating revision notes on {topic}..."):
                 try:
-                    tavily = TavilyClient(api_key=os.environ["TAVILY_API_KEY"])
+                    tavily = TavilyClient(api_key=TAVILY_API_KEY)
                     search_query = f"in-depth explanation and key points about the topic: {topic}"
-                    search_results = tavily.search(query = search_query, search_depth='advanced', max_results=5)
+                    search_results = tavily.search(query=search_query, search_depth='advanced', max_results=5)
                     context = "\n".join([result["content"] for result in search_results["results"]])
 
                     prompt_for_notes = f"""
@@ -175,14 +174,15 @@ elif page == "Revision Notes":
                     ---
                     """
                     notes = generate_single_response(prompt_for_notes)
-                    st.session_state.revision_notes = notes
+                    if notes:
+                        st.session_state.revision_notes = notes
                 except Exception as e:
                     st.error(f"An error occurred while generating notes: {e}")
-    
+
     with tab2:
         st.subheader("Summarize my Text/Document")
-        pasted_text = st.text_area("Paste your text here to summarize", height = 250)
-        uploaded_file = st.file_uploader("Or upload a document(.txt, .pdf)", type=["txt","pdf"])
+        pasted_text = st.text_area("Paste your text here to summarize", height=250)
+        uploaded_file = st.file_uploader("Or upload a document(.txt, .pdf)", type=["txt", "pdf"])
         if st.button("Generate Summary"):
             input_text = ""
             if uploaded_file:
@@ -192,7 +192,7 @@ elif page == "Revision Notes":
                     input_text = uploaded_file.read().decode("utf-8")
             elif pasted_text:
                 input_text = pasted_text
-            
+
             if input_text:
                 with st.spinner("Generating summary..."):
                     prompt_for_summary = f"""
@@ -206,14 +206,12 @@ elif page == "Revision Notes":
                     ---
                     """
                     notes = generate_single_response(prompt_for_summary)
-                    st.session_state.revision_notes = notes
+                    if notes:
+                        st.session_state.revision_notes = notes
             else:
                 st.warning("Please paste text or upload a document to summarize.")
+    
     if st.session_state.revision_notes:
         st.divider()
         st.subheader("Your Generated Revision Notes")
         st.markdown(st.session_state.revision_notes)
-
-
-    
-                
