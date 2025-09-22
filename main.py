@@ -40,8 +40,7 @@ def is_study_related(prompt:str) -> bool:
 
 def gemini(prompt):
     if not is_study_related(prompt):
-        st.warning("⚠️ This app only supports study-related questions. Please ask something academic.")
-        return None
+        return "⚠️ This app only supports study-related questions. Please ask something academic."
     response = model.generate_content(prompt, stream=True)
     for chunk in response:
         yield chunk.text
